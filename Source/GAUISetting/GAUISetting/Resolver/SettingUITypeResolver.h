@@ -3,10 +3,11 @@
 #pragma once
 
 #include "Type/SettingUIOptionTypes.h"
+#include "Type/SettingUIEditTypes.h"
 
 #include "SettingUITypeResolver.generated.h"
 
-class UGSCSubsystem;
+class USettingUISubsystem;
 
 
 /**
@@ -49,54 +50,69 @@ public:
 
 	////////////////////////////////////////////////////////////////////////
 	// Initialization
+protected:
+	UPROPERTY(Transient)
+	TWeakObjectPtr<USettingUISubsystem> OwnerSubsystem{ nullptr };
+
+	UPROPERTY(Transient)
+	FName DevName{ NAME_None };
+
+	UPROPERTY(Transient)
+	FSettingUIOption Data;
+
 public:
-	virtual void InitializeResolver(const FSettingUIOption& OptionData);
+	virtual void InitializeResolver(USettingUISubsystem* Subsystem, const FName& InDevName, const FSettingUIOption& OptionData);
+	virtual void ReleaseResolver();
+	virtual void ReEvaluateOption();
 
 
 	////////////////////////////////////////////////////////////////////////
 	// UI Data
-protected:
-	UPROPERTY(Transient)
-	FText DisplayName;
-
-	UPROPERTY(Transient)
-	FText Description;
-
 public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Info")
-	virtual const FText& GetDisplayName() const { return DisplayName; }
+	virtual const FName& GetDevName() const { return DevName; }
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Info")
-	virtual const FText& GetDescription() const { return Description; }
+	virtual const FText& GetDisplayName() const { return Data.Name; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Info")
+	virtual const FText& GetDescription() const { return Data.Description; }
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Info")
+	virtual const FText& GetCategory() const { return Data.Category; }
 
 
 	////////////////////////////////////////////////////////////////////////
 	// Setting Data
-protected:
-	UPROPERTY(Transient)
-	TWeakObjectPtr<UGSCSubsystem> SourceSubsystem{ nullptr };
-
-	UPROPERTY(Transient)
-	FName GetterName{ NAME_None };
-
-	UPROPERTY(Transient)
-	FName SetterName{ NAME_None };
-
-	UPROPERTY(Transient)
-	FName OptionGetterName{ NAME_None };
+public:
+	DECLARE_MULTICAST_DELEGATE_OneParam(FPropertyValueChangeDelegate, USettingUITypeResolver*);
+	FPropertyValueChangeDelegate OnPropertyValueChange;
 
 protected:
 	virtual FString GetPropertyValueAsString() const;
 	virtual bool SetPropertyValueFromString(const FString& StringValue);
 
+	void NotifyPropertyValueChange(bool bBroadcastDependancies = false);
+
 
 	////////////////////////////////////////////////////////////////////////
-	// Utilities
+	// Editable State
 protected:
-	template<typename T>
-	T* GetSourceSubsystem() const
-	{
-		return Cast<T>(SourceSubsystem.Get());
-	}
+	UPROPERTY(Transient)
+	FSettingUIEditableState EditableState{ FSettingUIEditableState::Editable };
+
+	UPROPERTY(Transient)
+	TObjectPtr<USettingUIEditCondition> EditCondition{ nullptr };
+
+public:
+	DECLARE_MULTICAST_DELEGATE_TwoParams(FEditableStateChangeDelegate, USettingUITypeResolver*, const FSettingUIEditableState&);
+	FEditableStateChangeDelegate OnEditStateChange;
+
+public:
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Editable State")
+	virtual const FSettingUIEditableState& GetEditableState() const { return EditableState; }
+
+protected:
+	virtual void UpdateEditableState();
 
 };

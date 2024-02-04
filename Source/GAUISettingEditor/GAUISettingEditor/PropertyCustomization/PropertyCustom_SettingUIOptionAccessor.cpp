@@ -433,17 +433,14 @@ const UClass* FPropertyCustom_SettingUIOptionAccessor::GetPropertyValueAsClass(c
 	void* ValueData;
 	Handle->GetValueData(ValueData);
 
-	auto* SoftClassPtr{ static_cast<FSoftObjectPtr*>(ValueData) };
-
-	auto ClassObject
+	if (ValueData)
 	{
-		!SoftClassPtr ? nullptr :
-		SoftClassPtr->IsValid() ? SoftClassPtr->Get() : SoftClassPtr->LoadSynchronous()
-	};
+		auto** Class{ static_cast<UClass**>(ValueData) };
 
-	if (ClassObject)
-	{
-		return Cast<UClass>(ClassObject);
+		if (Class)
+		{
+			return *Class;
+		}
 	}
 
 	return nullptr;

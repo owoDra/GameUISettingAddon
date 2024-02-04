@@ -2,11 +2,16 @@
 
 #include "SettingUITypeResolver.h"
 
+#include "EditCondition/SettingUIEditCondition.h"
+#include "SettingUISubsystem.h"
+
 #include "GSCGameUserSettings.h"
 #include "GSCSubsystem.h"
 
 #include "GSCoreLogs.h"
 
+#include "ICommonUIModule.h"
+#include "CommonUISettings.h"
 #include "PropertyPathHelpers.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(SettingUITypeResolver)
@@ -22,68 +27,93 @@ USettingUITypeResolver::USettingUITypeResolver(const FObjectInitializer& ObjectI
 
 UFunction* USettingUITypeResolver::GetGetterTemplate(const UClass* ResolverClass)
 {
-	check(ResolverClass);
+	if (ResolverClass)
+	{
+		static const FName NAME_GetterTemplate{ TEXTVIEW("GetterTemplate") };
 
-	static const FName NAME_GetterTemplate{ TEXTVIEW("GetterTemplate") };
+		return ResolverClass->FindFunctionByName(NAME_GetterTemplate);
+	}
 
-	return ResolverClass->FindFunctionByName(NAME_GetterTemplate);
+	return nullptr;
 }
 
 UFunction* USettingUITypeResolver::GetSetterTemplate(const UClass* ResolverClass)
 {
-	check(ResolverClass);
+	if (ResolverClass)
+	{
+		static const FName NAME_SetterTemplate{ TEXTVIEW("SetterTemplate") };
 
-	static const FName NAME_SetterTemplate{ TEXTVIEW("SetterTemplate") };
+		return ResolverClass->FindFunctionByName(NAME_SetterTemplate);
+	}
 
-	return ResolverClass->FindFunctionByName(NAME_SetterTemplate);
+	return nullptr;
 }
 
 UFunction* USettingUITypeResolver::GetOptionGetterTemplate(const UClass* ResolverClass)
 {
-	check(ResolverClass);
+	if (ResolverClass)
+	{
+		static const FName NAME_OptionGetterTemplate{ TEXTVIEW("OptionGetterTemplate") };
 
-	static const FName NAME_OptionGetterTemplate{ TEXTVIEW("OptionGetterTemplate") };
+		return ResolverClass->FindFunctionByName(NAME_OptionGetterTemplate);
+	}
 
-	return ResolverClass->FindFunctionByName(NAME_OptionGetterTemplate);
+	return nullptr;
 }
 
 #endif
 
 
-void USettingUITypeResolver::InitializeResolver(const FSettingUIOption& OptionData)
+// Initialization
+
+void USettingUITypeResolver::InitializeResolver(USettingUISubsystem* Subsystem, const FName& InDevName, const FSettingUIOption& OptionData)
 {
-	DisplayName = OptionData.Name;
-	Description = OptionData.Description;
-	GetterName = OptionData.Accessor.GetterName;
-	SetterName = OptionData.Accessor.SetterName;
-	OptionGetterName = OptionData.Accessor.OptionGetterName;
+	OwnerSubsystem = Subsystem;
+	DevName = InDevName;
+	Data = OptionData;
 
-	auto* SubsystemClass
+	if (Data.EditCondition)
 	{
-		OptionData.Accessor.Source.IsValid() ? OptionData.Accessor.Source.Get() : OptionData.Accessor.Source.LoadSynchronous()
-	};
-
-	auto* FoundSubsystem{ UGSCGameUserSettings::GetSettingSubsystemBase(SubsystemClass) };
-	if (ensure(FoundSubsystem))
-	{
-		SourceSubsystem = FoundSubsystem;
+		EditCondition = NewObject<USettingUIEditCondition>(this, Data.EditCondition);
+		EditCondition->InitializeEditCondition(this);
 	}
+
+	UpdateEditableState();
+	NotifyPropertyValueChange();
+}
+
+void USettingUITypeResolver::ReleaseResolver()
+{
+	if (EditCondition)
+	{
+		EditCondition->DeinitializeEditCondition();
+	}
+
+	OwnerSubsystem.Reset();
+}
+
+void USettingUITypeResolver::ReEvaluateOption()
+{
+	UpdateEditableState();
+	NotifyPropertyValueChange();
 }
 
 
+// Setting Data
+
 FString USettingUITypeResolver::GetPropertyValueAsString() const
 {
-	if (SourceSubsystem.IsValid())
+	if (auto* Subsystem{ UGSCGameUserSettings::GetSettingSubsystemBase(Data.Accessor.Source) })
 	{
 		FString OutValue;
 
-		if (PropertyPathHelpers::GetPropertyValueAsString(SourceSubsystem.Get(), GetterName.ToString(), OutValue))
+		if (PropertyPathHelpers::GetPropertyValueAsString(Subsystem, Data.Accessor.GetterName.ToString(), OutValue))
 		{
 			return OutValue;
 		}
 		else
 		{
-			UE_LOG(LogGameCore_Settings, Error, TEXT("Failed to get value from [%s::%s]"), *GetNameSafe(SourceSubsystem.Get()), *GetterName.ToString());
+			UE_LOG(LogGameCore_Settings, Error, TEXT("Failed to get value from [%s::%s]"), *GetNameSafe(Subsystem), *Data.Accessor.GetterName.ToString());
 		}
 	}
 	else
@@ -96,15 +126,16 @@ FString USettingUITypeResolver::GetPropertyValueAsString() const
 
 bool USettingUITypeResolver::SetPropertyValueFromString(const FString& StringValue)
 {
-	if (SourceSubsystem.IsValid())
+	if (auto* Subsystem{ UGSCGameUserSettings::GetSettingSubsystemBase(Data.Accessor.Source) })
 	{
-		if (PropertyPathHelpers::SetPropertyValueFromString(SourceSubsystem.Get(), SetterName.ToString(), StringValue))
+		if (PropertyPathHelpers::SetPropertyValueFromString(Subsystem, Data.Accessor.SetterName.ToString(), StringValue))
 		{
+			NotifyPropertyValueChange(true);
 			return true;
 		}
 		else
 		{
-			UE_LOG(LogGameCore_Settings, Error, TEXT("Failed to set value from [%s::%s]"), *GetNameSafe(SourceSubsystem.Get()), *SetterName.ToString());
+			UE_LOG(LogGameCore_Settings, Error, TEXT("Failed to set value from [%s::%s]"), *GetNameSafe(Subsystem), *Data.Accessor.SetterName.ToString());
 		}
 	}
 	else
@@ -113,4 +144,30 @@ bool USettingUITypeResolver::SetPropertyValueFromString(const FString& StringVal
 	}
 
 	return false;
+}
+
+void USettingUITypeResolver::NotifyPropertyValueChange(bool bBroadcastDependancies)
+{
+	OnPropertyValueChange.Broadcast(this);
+
+	if (bBroadcastDependancies)
+	{
+		OwnerSubsystem->NotifySettingsUpdate(Data.DependentSettings);
+	}
+}
+
+
+// Editable State
+
+void USettingUITypeResolver::UpdateEditableState()
+{
+	EditableState = EditCondition ? EditCondition->ComputeEditableState() : FSettingUIEditableState::Editable;
+
+	if (Data.RequestTraitTags.IsValid())
+	{
+		const auto bHasAllTrait{ ICommonUIModule::Get().GetSettings().GetPlatformTraits().HasAll(Data.RequestTraitTags) };
+		EditableState = bHasAllTrait ? EditableState : FSettingUIEditableState::Collapsed;
+	}
+
+	OnEditStateChange.Broadcast(this, EditableState);
 }

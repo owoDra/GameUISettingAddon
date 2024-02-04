@@ -23,6 +23,10 @@ public class GAUISetting : ModuleRules
 
                 "Slate", "SlateCore", "UMG",
 
+                "CommonUI", "CommonInput",
+
+                "GameplayTags",
+
                 "GSCore", "GUIExt",
             }
         );
@@ -31,6 +35,8 @@ public class GAUISetting : ModuleRules
         PrivateDependencyModuleNames.AddRange(
             new string[]
             {
+                "InputCore",
+
                 "DeveloperSettings", "PropertyPath",
             }
         );

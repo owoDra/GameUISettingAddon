@@ -2,7 +2,10 @@
 
 #include "GAUISettingEditor.h"
 
-#include "PropertyCustom_SettingUIOptionAccessor.h"
+#include "PropertyCustomization/PropertyCustom_SettingUIOptionAccessor.h"
+#include "AssetTypeActions/AssetTypeActions_SettingUIDetailVisualData.h"
+#include "AssetTypeActions/AssetTypeActions_SettingUIListVisualData.h"
+#include "AssetTypeActions/AssetTypeActions_SettingUITable.h"
 
 IMPLEMENT_MODULE(FGAUISettingEditorModule, GAUISettingEditor)
 
@@ -47,6 +50,9 @@ void FGAUISettingEditorModule::UnregisterPropertyCustomizations()
 
 void FGAUISettingEditorModule::RegisterAssetTypeActions()
 {
+	RegisterAsset<FAssetTypeActions_SettingUIDetailVisualData>(RegisteredAssetTypeActions);
+	RegisterAsset<FAssetTypeActions_SettingUIListVisualData>(RegisteredAssetTypeActions);
+	RegisterAsset<FAssetTypeActions_SettingUITable>(RegisteredAssetTypeActions);
 }
 
 void FGAUISettingEditorModule::UnregisterAssetTypeActions()

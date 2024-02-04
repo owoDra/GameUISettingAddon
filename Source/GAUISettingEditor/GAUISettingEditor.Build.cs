@@ -32,7 +32,7 @@ public class GAUISettingEditor : ModuleRules
 
                 "DeveloperSettings", "PropertyPath", "PropertyEditor",
 
-                "ToolWidgets", "ClassViewer", "AssetTools",
+                "ToolWidgets", "ClassViewer", "AssetTools", "DataTableEditor",
 
                 "GAUISetting",
             }
