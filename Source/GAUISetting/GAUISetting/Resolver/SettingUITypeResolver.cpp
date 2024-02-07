@@ -8,11 +8,8 @@
 #include "GSCGameUserSettings.h"
 #include "GSCSubsystem.h"
 
-#include "GSCoreLogs.h"
-
 #include "ICommonUIModule.h"
 #include "CommonUISettings.h"
-#include "PropertyPathHelpers.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(SettingUITypeResolver)
 
@@ -78,8 +75,14 @@ void USettingUITypeResolver::InitializeResolver(USettingUISubsystem* Subsystem, 
 		EditCondition->InitializeEditCondition(this);
 	}
 
+	OnInitialized();
+}
+
+void USettingUITypeResolver::OnInitialized()
+{
 	UpdateEditableState();
-	NotifyPropertyValueChange();
+	NotifyPropertyOptionChange();	// It must always be executed before NotifyPropertyValueChange(). 
+	NotifyPropertyValueChange();	// This is because the widget will not reflect the change properly.
 }
 
 void USettingUITypeResolver::ReleaseResolver()
@@ -95,65 +98,48 @@ void USettingUITypeResolver::ReleaseResolver()
 void USettingUITypeResolver::ReEvaluateOption()
 {
 	UpdateEditableState();
-	NotifyPropertyValueChange();
+	NotifyPropertyOptionChange();	// It must always be executed before NotifyPropertyValueChange(). 
+	NotifyPropertyValueChange();	// This is because the widget will not reflect the change properly.
 }
 
 
 // Setting Data
 
-FString USettingUITypeResolver::GetPropertyValueAsString() const
+UObject* USettingUITypeResolver::GetSource() const
 {
-	if (auto* Subsystem{ UGSCGameUserSettings::GetSettingSubsystemBase(Data.Accessor.Source) })
+	if (auto* GSCGUS{ UGSCGameUserSettings::GetGSCGameUserSettings() })
 	{
-		FString OutValue;
-
-		if (PropertyPathHelpers::GetPropertyValueAsString(Subsystem, Data.Accessor.GetterName.ToString(), OutValue))
+		if (auto SourceClass{ Data.Accessor.Source })
 		{
-			return OutValue;
+			if (auto* Subsystem{ GSCGUS->GetSubsystemBase(SourceClass) })
+			{
+				return Subsystem;
+			}
 		}
 		else
 		{
-			UE_LOG(LogGameCore_Settings, Error, TEXT("Failed to get value from [%s::%s]"), *GetNameSafe(Subsystem), *Data.Accessor.GetterName.ToString());
+			return GSCGUS;
 		}
 	}
-	else
-	{
-		UE_LOG(LogGameCore_Settings, Error, TEXT("Failed to get value because invalid setting subsystem"));
-	}
 
-	return FString();
-}
+	UE_LOG(LogGameCore_Settings, Error, TEXT("Failed to get source object for setting(%s)"), *DevName.ToString());
 
-bool USettingUITypeResolver::SetPropertyValueFromString(const FString& StringValue)
-{
-	if (auto* Subsystem{ UGSCGameUserSettings::GetSettingSubsystemBase(Data.Accessor.Source) })
-	{
-		if (PropertyPathHelpers::SetPropertyValueFromString(Subsystem, Data.Accessor.SetterName.ToString(), StringValue))
-		{
-			NotifyPropertyValueChange(true);
-			return true;
-		}
-		else
-		{
-			UE_LOG(LogGameCore_Settings, Error, TEXT("Failed to set value from [%s::%s]"), *GetNameSafe(Subsystem), *Data.Accessor.SetterName.ToString());
-		}
-	}
-	else
-	{
-		UE_LOG(LogGameCore_Settings, Error, TEXT("Failed to set value because invalid setting subsystem"));
-	}
-
-	return false;
+	return nullptr;
 }
 
 void USettingUITypeResolver::NotifyPropertyValueChange(bool bBroadcastDependancies)
 {
 	OnPropertyValueChange.Broadcast(this);
 
-	if (bBroadcastDependancies)
+	if (bBroadcastDependancies && OwnerSubsystem.IsValid())
 	{
 		OwnerSubsystem->NotifySettingsUpdate(Data.DependentSettings);
 	}
+}
+
+void USettingUITypeResolver::NotifyPropertyOptionChange()
+{
+	OnPropertyOptionChange.Broadcast(this);
 }
 
 
@@ -163,6 +149,8 @@ void USettingUITypeResolver::UpdateEditableState()
 {
 	EditableState = EditCondition ? EditCondition->ComputeEditableState() : FSettingUIEditableState::Editable;
 
+	NativeEditCondition(EditableState);
+
 	if (Data.RequestTraitTags.IsValid())
 	{
 		const auto bHasAllTrait{ ICommonUIModule::Get().GetSettings().GetPlatformTraits().HasAll(Data.RequestTraitTags) };
@@ -170,4 +158,8 @@ void USettingUITypeResolver::UpdateEditableState()
 	}
 
 	OnEditStateChange.Broadcast(this, EditableState);
+}
+
+void USettingUITypeResolver::NativeEditCondition(FSettingUIEditableState& InOutEditableState)
+{
 }

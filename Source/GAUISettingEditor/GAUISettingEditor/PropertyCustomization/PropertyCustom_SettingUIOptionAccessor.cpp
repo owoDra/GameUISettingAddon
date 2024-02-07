@@ -6,6 +6,7 @@
 #include "Resolver/SettingUITypeResolver.h"
 
 #include "GSCSubsystem.h"
+#include "GSCGameUserSettings.h"
 
 #include "GameFramework/GameUserSettings.h"
 #include "DetailLayoutBuilder.h"
@@ -435,11 +436,11 @@ const UClass* FPropertyCustom_SettingUIOptionAccessor::GetPropertyValueAsClass(c
 
 	if (ValueData)
 	{
-		auto** Class{ static_cast<UClass**>(ValueData) };
-
-		if (Class)
+		if (auto** ClassData{ static_cast<UClass**>(ValueData) })
 		{
-			return *Class;
+			auto* Class{ *ClassData ? *ClassData : UGSCGameUserSettings::StaticClass()};
+
+			return Class;
 		}
 	}
 
@@ -736,10 +737,17 @@ bool FPropertyCustom_SettingUIOptionAccessor::IsSignatureCompatible(const UFunct
 
 			if (!A->SameType(B))
 			{
+				if ((B->IsA(FEnumProperty::StaticClass()) && A->IsA(FByteProperty::StaticClass())) ||
+					(A->IsA(FEnumProperty::StaticClass()) && B->IsA(FByteProperty::StaticClass())))
+				{
+					return true;
+				}
+
 				if (A->PropertyFlags & B->PropertyFlags & CPF_ReturnParm && A->IsA(B->GetClass()))
 				{
 					return true;
 				}
+
 				return false;
 			}
 

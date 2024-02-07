@@ -5,6 +5,8 @@
 #include "SettingUIDeveloperSettings.h"
 #include "Resolver/SettingUITypeResolver.h"
 
+#include "GSCGameUserSettings.h"
+
 #include "Engine/DataTable.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(SettingUISubsystem)
@@ -17,6 +19,13 @@ void USettingUISubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	Super::Initialize(Collection);
 
 	LoadStartupSettings();
+
+	auto* GSCGUS{ UGSCGameUserSettings::GetGSCGameUserSettings() };
+	if (ensure(GSCGUS))
+	{
+		GSCGUS->CallAndRegister_OnGameSettingsApplied(
+			UGSCGameUserSettings::FGameSettingsAppliedDelegate::FDelegate::CreateUObject(this, &ThisClass::OnSettingChanged));
+	}
 }
 
 void USettingUISubsystem::Deinitialize()
@@ -56,6 +65,11 @@ void USettingUISubsystem::LoadStartupSettings()
 	}
 }
 
+void USettingUISubsystem::OnSettingChanged(UGSCGameUserSettings* Settings)
+{
+	NotifyAllSettingsUpdate();
+}
+
 
 // Setting Tables
 
@@ -68,7 +82,7 @@ void USettingUISubsystem::AddSettingTable(FGameplayTag TableTag, const UDataTabl
 		InSettingTable->ForeachRow<FSettingUIOption>(FString(),
 			[this, &NewTable](const FName& Key, const FSettingUIOption& Value)
 			{
-				if(!NewTable.Row.Contains(Key))
+				if(!NewTable.Row.Contains(Key) && !Value.bDeprecated)
 				{
 					if (auto* NewResolver{ NewObject<USettingUITypeResolver>(this, Value.Accessor.Type) })
 					{
@@ -124,6 +138,20 @@ void USettingUISubsystem::NotifySettingsUpdate(const TSet<FName>& SettingNames)
 		for (const auto& SettingToUpdate : SettingNames)
 		{
 			if (auto Setting{ TableKVP.Value.Row.FindRef(SettingToUpdate) })
+			{
+				Setting->ReEvaluateOption();
+			}
+		}
+	}
+}
+
+void USettingUISubsystem::NotifyAllSettingsUpdate()
+{
+	for (const auto& TableKVP : SettingTables)
+	{
+		for (const auto& SettingKVP : TableKVP.Value.Row)
+		{
+			if (auto& Setting{ SettingKVP.Value })
 			{
 				Setting->ReEvaluateOption();
 			}

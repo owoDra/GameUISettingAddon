@@ -3,7 +3,7 @@
 #include "SettingUIListVisualData.h"
 
 #include "Resolver/SettingUITypeResolver.h"
-#include "SettingUIListEntry.h"
+#include "Entry/SettingUIListEntry.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(SettingUIListVisualData)
 

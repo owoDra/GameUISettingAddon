@@ -29,7 +29,7 @@ public:
 	// Key	 : TableTag
 	// Value : TableObject
 	//
-	UPROPERTY(Config, EditAnywhere, Category = "Startup", meta = (ForceInlineRow, RowType = "SettingUIOption", AllowedClasses = "/Script/Engine.DataTable", Categories = "UI.SettingTable"))
+	UPROPERTY(Config, EditAnywhere, Category = "Startup", meta = (ForceInlineRow, RowType = "SettingUIOption", AllowedClasses = "/Script/GAUISetting.SettingUITable", Categories = "UI.SettingTable"))
 	TMap<FGameplayTag, FSoftObjectPath> StartupSettingTables;
 
 };

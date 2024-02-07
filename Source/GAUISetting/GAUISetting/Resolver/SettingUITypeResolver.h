@@ -2,8 +2,15 @@
 
 #pragma once
 
+#include "UObject/Object.h"
+
+
 #include "Type/SettingUIOptionTypes.h"
 #include "Type/SettingUIEditTypes.h"
+
+#include "GSCoreLogs.h"
+
+#include "PropertyPathHelpers.h"
 
 #include "SettingUITypeResolver.generated.h"
 
@@ -23,7 +30,7 @@ class USettingUISubsystem;
  *	 - static void SetterTemplate([TYPE] Arg)
  *	 - static TArray<[TYPE]> OptionGetterTemplate()
  */
-UCLASS(Abstract, BlueprintType, NotBlueprintable)
+UCLASS(Abstract, Blueprintable, BlueprintType)
 class GAUISETTING_API USettingUITypeResolver : public UObject
 {
 	GENERATED_BODY()
@@ -62,6 +69,7 @@ protected:
 
 public:
 	virtual void InitializeResolver(USettingUISubsystem* Subsystem, const FName& InDevName, const FSettingUIOption& OptionData);
+	virtual void OnInitialized();
 	virtual void ReleaseResolver();
 	virtual void ReEvaluateOption();
 
@@ -81,18 +89,80 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Info")
 	virtual const FText& GetCategory() const { return Data.Category; }
 
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Info")
+	virtual TArray<FText> GetOptionDisplayTexts() const { return TArray<FText>(); }
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, BlueprintPure, Category = "Info")
+	bool IsSelectable() const;
+	virtual bool IsSelectable_Implementation() const { return true; }
 
 	////////////////////////////////////////////////////////////////////////
 	// Setting Data
 public:
 	DECLARE_MULTICAST_DELEGATE_OneParam(FPropertyValueChangeDelegate, USettingUITypeResolver*);
 	FPropertyValueChangeDelegate OnPropertyValueChange;
+	FPropertyValueChangeDelegate OnPropertyOptionChange;
 
 protected:
-	virtual FString GetPropertyValueAsString() const;
-	virtual bool SetPropertyValueFromString(const FString& StringValue);
+	UObject* GetSource() const;
 
-	void NotifyPropertyValueChange(bool bBroadcastDependancies = false);
+	virtual void NotifyPropertyValueChange(bool bBroadcastDependancies = false);
+	virtual void NotifyPropertyOptionChange();
+
+	template<typename TPropertyType>
+	bool GetPropertyValue(TPropertyType& OutValue) const
+	{
+		if (auto* Container{ GetSource() })
+		{
+			if (PropertyPathHelpers::GetPropertyValue<TPropertyType>(Container, Data.Accessor.GetterName.ToString(), OutValue))
+			{
+				return true;
+			}
+			else
+			{
+				UE_LOG(LogGameCore_Settings, Error, TEXT("Failed to get value from [%s::%s]"), *GetNameSafe(Container), *Data.Accessor.GetterName.ToString());
+			}
+		}
+
+		return false;
+	}
+
+	template<typename TPropertyType>
+	bool SetPropertyValue(const TPropertyType& InValue)
+	{
+		if (auto* Container{ GetSource() })
+		{
+			if (PropertyPathHelpers::SetPropertyValue<TPropertyType>(Container, Data.Accessor.SetterName.ToString(), InValue))
+			{
+				NotifyPropertyValueChange(true);
+				return true;
+			}
+			else
+			{
+				UE_LOG(LogGameCore_Settings, Error, TEXT("Failed to set value from [%s::%s]"), *GetNameSafe(Container), *Data.Accessor.SetterName.ToString());
+			}
+		}
+
+		return false;
+	}
+
+	template<typename TPropertyTypeArray>
+	bool GetPropertyOptions(TPropertyTypeArray& OutValue) const
+	{
+		if (auto* Container{ GetSource() })
+		{
+			if (PropertyPathHelpers::GetPropertyValue<TPropertyTypeArray>(Container, Data.Accessor.OptionGetterName.ToString(), OutValue))
+			{
+				return true;
+			}
+			else
+			{
+				UE_LOG(LogGameCore_Settings, Error, TEXT("Failed to get option from [%s::%s]"), *GetNameSafe(Container), *Data.Accessor.OptionGetterName.ToString());
+			}
+		}
+
+		return false;
+	}
 
 
 	////////////////////////////////////////////////////////////////////////
@@ -114,5 +184,6 @@ public:
 
 protected:
 	virtual void UpdateEditableState();
+	virtual void NativeEditCondition(FSettingUIEditableState& InOutEditableState);
 
 };

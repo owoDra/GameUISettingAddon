@@ -4,6 +4,8 @@
 
 #include "CommonUserWidget.h"
 
+#include "GameplayTagContainer.h"
+
 #include "SettingUIPanel.generated.h"
 
 class USettingUIListView;
@@ -39,6 +41,13 @@ public:
 
 	//////////////////////////////////////////////////////////////////////////////////
 	// List View
+public:
+	UFUNCTION(BlueprintCallable, Category = "Settings", meta = (GameplayTagFilter = "UI.SettingTable"))
+	virtual void SetCurrentDisplayTable(FGameplayTag TableTag);
+
+	UFUNCTION(BlueprintCallable, Category = "Settings")
+	virtual void RebuildList();
+
 protected:
 	void HandleSettingItemHoveredChanged(UObject* Item, bool bHovered);
 	void HandleSettingItemSelectionChanged(UObject* Item);

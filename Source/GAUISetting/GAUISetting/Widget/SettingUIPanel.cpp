@@ -5,6 +5,7 @@
 #include "Widget/ListView/SettingUIListView.h"
 #include "Widget/DetailView/SettingUIDetailView.h"
 #include "Resolver/SettingUITypeResolver.h"
+#include "SettingUISubsystem.h"
 
 #include "CommonInputSubsystem.h"
 #include "CommonInputTypeEnum.h"
@@ -53,6 +54,27 @@ FReply USettingUIPanel::NativeOnFocusReceived(const FGeometry& InGeometry, const
 	}
 
 	return FReply::Unhandled();
+}
+
+
+void USettingUIPanel::SetCurrentDisplayTable(FGameplayTag TableTag)
+{
+	if (!TableTag.IsValid())
+	{
+		return;
+	}
+
+	if (auto* Subsystem{ UGameInstance::GetSubsystem<USettingUISubsystem>(GetGameInstance()) })
+	{
+		TArray<USettingUITypeResolver*> Settings;
+		Subsystem->GetTableSettings(TableTag, Settings);
+		ListView_Settings->SetListItems(Settings);
+	}
+}
+
+void USettingUIPanel::RebuildList()
+{
+	ListView_Settings->RegenerateAllEntries();
 }
 
 

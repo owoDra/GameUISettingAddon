@@ -3,6 +3,7 @@
 #include "SettingUIListEntry.h"
 
 #include "Resolver/SettingUITypeResolver.h"
+#include "Widget/ListView/SettingUIListView.h"
 
 #include "CommonInputSubsystem.h"
 #include "CommonInputTypeEnum.h"
@@ -20,9 +21,10 @@ USettingUIListEntry::USettingUIListEntry(const FObjectInitializer& ObjectInitial
 void USettingUIListEntry::SetSetting(USettingUITypeResolver* InSetting)
 {
 	Setting = InSetting;
-	check(Setting.IsValid());
+	check(Setting);
 
 	Setting->OnPropertyValueChange.AddUObject(this, &ThisClass::HandleSettingValueChanged);
+	Setting->OnPropertyOptionChange.AddUObject(this, &ThisClass::HandleSettingOptionChanged);
 	Setting->OnEditStateChange.AddUObject(this, &ThisClass::HandleEditableStateChanged);
 
 	if (Text_SettingName)
@@ -30,8 +32,9 @@ void USettingUIListEntry::SetSetting(USettingUITypeResolver* InSetting)
 		Text_SettingName->SetText(Setting->GetDisplayName());
 	}
 
-	HandleSettingValueChanged(Setting.Get());
-	HandleEditableStateChanged(Setting.Get(), Setting->GetEditableState());
+	HandleSettingOptionChanged(Setting);
+	HandleSettingValueChanged(Setting);
+	HandleEditableStateChanged(Setting, Setting->GetEditableState());
 }
 
 void USettingUIListEntry::NativeOnEntryReleased()
@@ -43,22 +46,36 @@ void USettingUIListEntry::NativeOnEntryReleased()
 		Background->StopAllAnimations();
 	}
 
-	if (ensure(Setting.IsValid()))
+	if (ensure(Setting))
 	{
 		Setting->OnPropertyValueChange.RemoveAll(this);
+		Setting->OnPropertyOptionChange.RemoveAll(this);
 		Setting->OnEditStateChange.RemoveAll(this);
 	}
 
 	Setting = nullptr;
 }
 
+
 void USettingUIListEntry::HandleSettingValueChanged(USettingUITypeResolver* InSetting)
 {
 	OnSettingValueChanged(InSetting);
 }
 
+void USettingUIListEntry::HandleSettingOptionChanged(USettingUITypeResolver* InSetting)
+{
+	OnSettingOptionChanged(InSetting);
+}
+
 void USettingUIListEntry::HandleEditableStateChanged(USettingUITypeResolver* InSetting, const FSettingUIEditableState& InEditableState)
 {
+	SetIsEnabled(InEditableState.bEnabled);
+	
+	if (Background)
+	{
+		Background->SetVisibility(InEditableState.bVisible ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+	}
+
 	OnEditableStateChanged(InSetting, InEditableState);
 }
 

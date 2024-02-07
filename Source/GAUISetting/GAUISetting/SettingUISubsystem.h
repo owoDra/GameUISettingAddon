@@ -8,6 +8,7 @@
 
 #include "SettingUISubsystem.generated.h"
 
+class UGSCGameUserSettings;
 class USettingUITypeResolver;
 class UDataTable;
 
@@ -49,6 +50,8 @@ public:
 protected:
 	virtual void LoadStartupSettings();
 
+	virtual void OnSettingChanged(UGSCGameUserSettings* Settings);
+
 
 	////////////////////////////////////////////////////////////////////////
 	// Setting Tables
@@ -71,5 +74,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "Setting Table")
 	virtual void NotifySettingsUpdate(const TSet<FName>& SettingNames);
+
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "Setting Table")
+	virtual void NotifyAllSettingsUpdate();
 
 };

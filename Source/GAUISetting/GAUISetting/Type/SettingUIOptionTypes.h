@@ -30,6 +30,9 @@ public:
 
 	//
 	// Class in which setting option parameter are stored
+	// 
+	// Tips:
+	//	If not selected, look for it in GameUserSettings
 	//
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	TSubclassOf<UGSCSubsystem> Source;
@@ -87,7 +90,7 @@ public:
 	//
 	// Platform Trait Tags required to edit this configuration item.
 	//
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (Categories = "Platform.Trait"))
 	FGameplayTagContainer RequestTraitTags;
 
 	//
@@ -104,5 +107,8 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (ShowOnlyInnerProperties))
 	FSettingUIOptionAccessor Accessor;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	bool bDeprecated{ false };
 
 };

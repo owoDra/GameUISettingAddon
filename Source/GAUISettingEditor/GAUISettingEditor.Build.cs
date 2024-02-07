@@ -34,7 +34,7 @@ public class GAUISettingEditor : ModuleRules
 
                 "ToolWidgets", "ClassViewer", "AssetTools", "DataTableEditor",
 
-                "GAUISetting",
+                "GAUISetting", "GSCore",
             }
 		);
 	}

@@ -3,7 +3,7 @@
 #include "SettingUIListView.h"
 
 #include "Resolver/SettingUITypeResolver.h"
-#include "SettingUIListEntry.h"
+#include "Entry/SettingUIListEntry.h"
 #include "SettingUIListVisualData.h"
 
 #include "GUIExtLogs.h"
@@ -54,12 +54,12 @@ UUserWidget& USettingUIListView::OnGenerateEntryWidgetInternal(UObject* Item, TS
 		}
 		else
 		{
-			UE_LOG(LogGameExt_UI, Error, TEXT("USettingUIListView: No Entry Class Found!"));
+			// UE_LOG(LogGameExt_UI, Error, TEXT("USettingUIListView: No Entry Class Found!"));
 		}
 	}
 	else
 	{
-		UE_LOG(LogGameExt_UI, Error, TEXT("USettingUIListView: No VisualData Defined!"));
+		// UE_LOG(LogGameExt_UI, Error, TEXT("USettingUIListView: No VisualData Defined!"));
 	}
 
 	// Create entry
@@ -72,4 +72,10 @@ UUserWidget& USettingUIListView::OnGenerateEntryWidgetInternal(UObject* Item, TS
 	}
 
 	return EntryWidget;
+}
+
+bool USettingUIListView::OnIsSelectableOrNavigableInternal(UObject* SelectedItem)
+{
+	auto* Setting{ Cast<USettingUITypeResolver>(SelectedItem) };
+	return Setting ? Setting->IsSelectable() : false;
 }

@@ -27,7 +27,7 @@ public:
 	// Initialization
 protected:
 	UPROPERTY()
-	TWeakObjectPtr<USettingUITypeResolver> Setting;
+	TObjectPtr<USettingUITypeResolver> Setting;
 
 public:
 	virtual void SetSetting(USettingUITypeResolver* InSetting);
@@ -36,10 +36,14 @@ protected:
 	virtual void NativeOnEntryReleased() override;
 
 	virtual void HandleSettingValueChanged(USettingUITypeResolver* InSetting);
+	virtual void HandleSettingOptionChanged(USettingUITypeResolver* InSetting);
 	virtual void HandleEditableStateChanged(USettingUITypeResolver* InSetting, const FSettingUIEditableState& InEditableState);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Setting")
 	void OnSettingValueChanged(USettingUITypeResolver* InSetting);
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "Setting")
+	void OnSettingOptionChanged(USettingUITypeResolver* InSetting);
 
 	UFUNCTION(BlueprintImplementableEvent, Category = "Setting")
 	void OnEditableStateChanged(USettingUITypeResolver* InSetting, const FSettingUIEditableState& InEditableState);
@@ -65,5 +69,18 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidgetOptional, BlueprintProtected = true, AllowPrivateAccess = true))
 	TObjectPtr<UCommonTextBlock> Text_SettingName;
+
+
+	//////////////////////////////////////////////////////////////////
+	// Utilities
+protected:
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Utilities", meta = (DeterminesOutputType = "InClass"))
+	USettingUITypeResolver* GetSetting(TSubclassOf<USettingUITypeResolver> InClass) const { return Setting; }
+
+	template<typename T>
+	T* GetResolver() const
+	{
+		return Cast<T>(Setting);
+	}
 
 };
