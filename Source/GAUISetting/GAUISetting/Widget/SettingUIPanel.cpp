@@ -64,7 +64,7 @@ void USettingUIPanel::SetCurrentDisplayTable(FGameplayTag TableTag)
 		return;
 	}
 
-	if (auto* Subsystem{ UGameInstance::GetSubsystem<USettingUISubsystem>(GetGameInstance()) })
+	if (auto* Subsystem{ ULocalPlayer::GetSubsystem<USettingUISubsystem>(GetOwningLocalPlayer()) })
 	{
 		TArray<USettingUITypeResolver*> Settings;
 		Subsystem->GetTableSettings(TableTag, Settings);

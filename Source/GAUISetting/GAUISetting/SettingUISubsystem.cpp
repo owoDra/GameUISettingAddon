@@ -4,6 +4,7 @@
 
 #include "SettingUIDeveloperSettings.h"
 #include "Resolver/SettingUITypeResolver.h"
+#include "Register/SettingUICustomRegister.h"
 
 #include "GSCGameUserSettings.h"
 
@@ -19,37 +20,23 @@ void USettingUISubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	Super::Initialize(Collection);
 
 	LoadStartupSettings();
-
-	auto* GSCGUS{ UGSCGameUserSettings::GetGSCGameUserSettings() };
-	if (ensure(GSCGUS))
-	{
-		GSCGUS->CallAndRegister_OnGameSettingsApplied(
-			UGSCGameUserSettings::FGameSettingsAppliedDelegate::FDelegate::CreateUObject(this, &ThisClass::OnSettingChanged));
-	}
 }
 
 void USettingUISubsystem::Deinitialize()
 {
 	Super::Deinitialize();
 
-
+	RemoveAllSettingTable();
 }
 
 bool USettingUISubsystem::ShouldCreateSubsystem(UObject* Outer) const
 {
-	// Only clients have subsystem
+	TArray<UClass*> ChildClasses;
+	GetDerivedClasses(GetClass(), ChildClasses, false);
 
-	if (!CastChecked<UGameInstance>(Outer)->IsDedicatedServerInstance())
-	{
-		TArray<UClass*> ChildClasses;
-		GetDerivedClasses(GetClass(), ChildClasses, false);
+	// Only create an instance if there is no override implementation defined elsewhere
 
-		// Only create an instance if there is no override implementation defined elsewhere
-
-		return ChildClasses.Num() == 0;
-	}
-
-	return false;
+	return ChildClasses.Num() == 0;
 }
 
 void USettingUISubsystem::LoadStartupSettings()
@@ -59,15 +46,17 @@ void USettingUISubsystem::LoadStartupSettings()
 	for (const auto& KVP : DevSetting->StartupSettingTables)
 	{
 		const auto& TableTag{ KVP.Key };
-		const auto* TableObject{ Cast<UDataTable>(KVP.Value.TryLoad()) };
+		const auto* LoadedObject{ KVP.Value.TryLoad() };
 
-		AddSettingTable(TableTag, TableObject);
+		if (const auto* TableObject{ Cast<UDataTable>(LoadedObject) })
+		{
+			AddSettingTable(TableTag, TableObject);
+		}
+		else if (const auto* CustomRegister{ Cast<USettingUICustomRegister>(LoadedObject) })
+		{
+			AddSettingCustomTable(TableTag, CustomRegister);
+		}
 	}
-}
-
-void USettingUISubsystem::OnSettingChanged(UGSCGameUserSettings* Settings)
-{
-	NotifyAllSettingsUpdate();
 }
 
 
@@ -97,6 +86,14 @@ void USettingUISubsystem::AddSettingTable(FGameplayTag TableTag, const UDataTabl
 	}
 }
 
+void USettingUISubsystem::AddSettingCustomTable(FGameplayTag TableTag, const USettingUICustomRegister* InCustomRegister)
+{
+	if (TableTag.IsValid() && InCustomRegister && !SettingTables.Contains(TableTag))
+	{
+		SettingTables.Add(TableTag, InCustomRegister->CreateTable(this));
+	}
+}
+
 void USettingUISubsystem::RemoveSettingTable(FGameplayTag TableTag)
 {
 	if (TableTag.IsValid())
@@ -115,6 +112,24 @@ void USettingUISubsystem::RemoveSettingTable(FGameplayTag TableTag)
 		}
 
 		SettingTables.Remove(TableTag);
+	}
+}
+
+void USettingUISubsystem::RemoveAllSettingTable()
+{
+	for (auto TableIt{ SettingTables.CreateIterator() }; TableIt; ++TableIt)
+	{
+		for (auto RowIt{ TableIt->Value.Row.CreateIterator() }; RowIt; ++RowIt)
+		{
+			if (auto Resolver{ RowIt->Value })
+			{
+				Resolver->ReleaseResolver();
+			}
+
+			RowIt.RemoveCurrent();
+		}
+
+		TableIt.RemoveCurrent();
 	}
 }
 

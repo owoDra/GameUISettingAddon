@@ -25,7 +25,7 @@ void USettingUITypeResolver_Switch_Resolution::NotifyPropertyOptionChange()
 	UKismetSystemLibrary::GetSupportedFullscreenResolutions(OptionValues);
 	for (const auto& Resolution : OptionValues)
 	{
-		OptionDisplayTexts.Add(FText::Format(NSLOCTEXT("SettingUI", "ResolutionTextFormat", "{X}×{Y}"), Resolution.X, Resolution.Y));
+		OptionDisplayTexts.Add(FText::Format(NSLOCTEXT("SettingUI", "ResolutionTextFormat", "{0}×{1}"), Resolution.X, Resolution.Y));
 	}
 
 	Super::NotifyPropertyOptionChange();

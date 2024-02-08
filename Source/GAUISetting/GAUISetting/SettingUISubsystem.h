@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "Subsystems/GameInstanceSubsystem.h"
+#include "Subsystems/LocalPlayerSubsystem.h"
 
 #include "GameplayTagContainer.h"
 
@@ -10,6 +10,7 @@
 
 class UGSCGameUserSettings;
 class USettingUITypeResolver;
+class USettingUICustomRegister;
 class UDataTable;
 
 
@@ -34,7 +35,7 @@ public:
  * Subsystems that manage setting options that can be displayed in the UI
  */
 UCLASS()
-class GAUISETTING_API USettingUISubsystem : public UGameInstanceSubsystem
+class GAUISETTING_API USettingUISubsystem : public ULocalPlayerSubsystem
 {
 	GENERATED_BODY()
 public:
@@ -49,8 +50,6 @@ public:
 
 protected:
 	virtual void LoadStartupSettings();
-
-	virtual void OnSettingChanged(UGSCGameUserSettings* Settings);
 
 
 	////////////////////////////////////////////////////////////////////////
@@ -67,7 +66,13 @@ public:
 	virtual void AddSettingTable(FGameplayTag TableTag, UPARAM(meta = (RowType = "SettingUIOption")) const UDataTable* InSettingTable);
 
 	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "Setting Table", meta = (GameplayTagFilter = "UI.SettingTable"))
+	virtual void AddSettingCustomTable(FGameplayTag TableTag, const USettingUICustomRegister* InCustomRegister);
+
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "Setting Table", meta = (GameplayTagFilter = "UI.SettingTable"))
 	virtual void RemoveSettingTable(FGameplayTag TableTag);
+
+	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "Setting Table")
+	virtual void RemoveAllSettingTable();
 
 	UFUNCTION(BlueprintCallable, BlueprintCosmetic, Category = "Setting Table", meta = (GameplayTagFilter = "UI.SettingTable"))
 	virtual void GetTableSettings(FGameplayTag TableTag, TArray<USettingUITypeResolver*>& OutArray) const;

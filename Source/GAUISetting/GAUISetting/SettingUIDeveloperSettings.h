@@ -13,7 +13,7 @@
  * Settings for a setting UI.
  */
 UCLASS(Config = "Game", Defaultconfig, meta = (DisplayName = "Game UI: Setting Addon"))
-class USettingUIDeveloperSettings : public UDeveloperSettings
+class GAUISETTING_API USettingUIDeveloperSettings : public UDeveloperSettings
 {
 public:
 	GENERATED_BODY()
@@ -29,7 +29,7 @@ public:
 	// Key	 : TableTag
 	// Value : TableObject
 	//
-	UPROPERTY(Config, EditAnywhere, Category = "Startup", meta = (ForceInlineRow, RowType = "SettingUIOption", AllowedClasses = "/Script/GAUISetting.SettingUITable", Categories = "UI.SettingTable"))
+	UPROPERTY(Config, EditAnywhere, Category = "Startup", meta = (ForceInlineRow, RowType = "SettingUIOption", AllowedClasses = "/Script/GAUISetting.SettingUITable, /Script/GAUISetting.SettingUICustomRegister", Categories = "UI.SettingTable"))
 	TMap<FGameplayTag, FSoftObjectPath> StartupSettingTables;
 
 };
