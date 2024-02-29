@@ -340,13 +340,15 @@ void USettingUITypeResolver_Switch_Enum::NotifyPropertyOptionChange()
 	{
 		const auto NumEnum{ Enum->NumEnums() - 1 };
 
-		for (auto Idx{ 0 }; Idx < NumEnum; ++Idx)
+		for (auto Idx{ 0 }; Idx < (NumEnum - 1); ++Idx)
 		{
-			if (!Enum->HasMetaData(TEXT("Hidden"), Idx))
+			/*if (!Enum->HasMetaData(TEXT("Hidden"), Idx))
 			{
-				OptionDisplayTexts.Add(Enum->GetDisplayNameTextByIndex(Idx));
-				OptionValues.Add(Idx);
-			}
+				
+			}*/
+
+			OptionDisplayTexts.Add(Enum->GetDisplayNameTextByIndex(Idx));
+			OptionValues.Add(Idx);
 		}
 	}
 
